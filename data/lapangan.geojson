@@ -1,0 +1,23 @@
+{
+"type": "FeatureCollection",
+"name": "lapangan",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"xy_coordinate_resolution": 1e-05,
+"features": [
+{ "type": "Feature", "properties": { "label": "H1-S1", "kategori": "Singkapan batuan/profil tanah", "ket": "Batulempung menyerpih Formasi Halang (N85°E/30°) dengan sisipan kuarsa sejajar perlapisan", "kelas": "3/3/3/3" }, "geometry": { "type": "Point", "coordinates": [ 108.25287, -6.87031 ] } },
+{ "type": "Feature", "properties": { "label": "H1S3", "kategori": "Singkapan batuan/profil tanah", "ket": "Profil tanah lempung merah lapuk sempurna", "kelas": "3/3/3/3" }, "geometry": { "type": "Point", "coordinates": [ 108.25375, -6.87299 ] } },
+{ "type": "Feature", "properties": { "label": "H1S4", "kategori": "Longsor/kerusakan jalan", "ket": "Kerusakan jalan", "kelas": "5/4/5/5" }, "geometry": { "type": "Point", "coordinates": [ 108.25773, -6.87651 ] } },
+{ "type": "Feature", "properties": { "label": "H1S5", "kategori": "Pengamatan (deskripsi menyusul)", "ket": "Lapukan batupasir; zona sesar Baribis (N200°E/85°)", "kelas": "3/3/3/2" }, "geometry": { "type": "Point", "coordinates": [ 108.27513, -6.87897 ] } },
+{ "type": "Feature", "properties": { "label": "H1S6", "kategori": "Singkapan batuan/profil tanah", "ket": "Endapan sungai", "kelas": "3/2/3/2" }, "geometry": { "type": "Point", "coordinates": [ 108.18516, -6.79391 ] } },
+{ "type": "Feature", "properties": { "label": "H2S1", "kategori": "Pengamatan geomorfologi", "ket": "Pengamatan geomorfologi", "kelas": "3/3/3/3" }, "geometry": { "type": "Point", "coordinates": [ 108.30385, -6.91087 ] } },
+{ "type": "Feature", "properties": { "label": "H2S2", "kategori": "Pengamatan geomorfologi", "ket": "Pengamatan geomorfologi", "kelas": "2/2/1/2" }, "geometry": { "type": "Point", "coordinates": [ 108.28004, -6.9409 ] } },
+{ "type": "Feature", "properties": { "label": "H2S3", "kategori": "Pengamatan (deskripsi menyusul)", "ket": "Retakan jalan berarah utara–selatan, panjang 13 m", "kelas": "2/2/2/2" }, "geometry": { "type": "Point", "coordinates": [ 108.28074, -6.9439 ] } },
+{ "type": "Feature", "properties": { "label": "H2S4", "kategori": "Pengamatan geomorfologi", "ket": "Pengamatan geomorfologi", "kelas": "4/3/3/4" }, "geometry": { "type": "Point", "coordinates": [ 108.27826, -6.96014 ] } },
+{ "type": "Feature", "properties": { "label": "H2S5", "kategori": "Singkapan batuan/profil tanah", "ket": "Lapukan mengulit bawang pada batuan lempungan", "kelas": "2/2/2/2" }, "geometry": { "type": "Point", "coordinates": [ 108.24612, -6.96372 ] } },
+{ "type": "Feature", "properties": { "label": "H2S6", "kategori": "Pengamatan geomorfologi", "ket": "Pengamatan geomorfologi", "kelas": "2/2/2/2" }, "geometry": { "type": "Point", "coordinates": [ 108.24263, -6.97058 ] } },
+{ "type": "Feature", "properties": { "label": "H2S7", "kategori": "Longsor/kerusakan jalan", "ket": "Longsoran tepi jalan", "kelas": "3/3/3/3" }, "geometry": { "type": "Point", "coordinates": [ 108.23841, -6.99676 ] } },
+{ "type": "Feature", "properties": { "label": "H2S8a", "kategori": "Mata air", "ket": "Mata air", "kelas": "3/3/3/3" }, "geometry": { "type": "Point", "coordinates": [ 108.22128, -7.02573 ] } },
+{ "type": "Feature", "properties": { "label": "H2S8b", "kategori": "Longsor/kerusakan jalan", "ket": "Longsoran jalan Malausma, rusak kembali setelah diperbaiki", "kelas": "2/2/2/2" }, "geometry": { "type": "Point", "coordinates": [ 108.28237, -7.04851 ] } },
+{ "type": "Feature", "properties": { "label": "H2S9", "kategori": "Mata air", "ket": "Mata air debit besar dan bekas bangunan rusak, 19 m dari kontak", "kelas": "2/2/2/2" }, "geometry": { "type": "Point", "coordinates": [ 108.28233, -7.04603 ] } }
+]
+}
