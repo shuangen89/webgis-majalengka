@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebGIS Kerentanan Majalengka</title>
+<link rel="stylesheet" href="leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap">
+<style>
+/* VOICE: lembar kerja peta untuk BPBD/Bappeda, tenang dan teknis
+   IDEA: meja peta geologi: satu lembar peta besar, panel lapisan di sampingnya seperti legenda lembar
+   PICTURE: peta kerentanan Majalengka di atas relief DEMNAS mengisi layar
+   COLOUR and TYPE: putih, tinta #101418, aksen kuning #ffd84a untuk lapisan aktif; Manrope
+   LAYOUT: peta kiri penuh tinggi, panel 340px kanan; di bawah 760px panel turun di bawah peta */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#101418);--ink:light-dark(#101418,#e8ecef);--mut:light-dark(#5b6470,#9aa4ae);--line:light-dark(#e2e6ea,#2a3138);--acc:#ffd84a;--sea:light-dark(#eef2f4,#0c1013)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Manrope,system-ui,sans-serif;display:flex;flex-direction:column}
+header{padding:12px 18px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+h1{font-size:20px;line-height:1.15;margin:0;font-weight:800}
+header p{margin:0;color:var(--mut);font-size:13px}
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:0}
+#map{background:var(--sea);min-height:420px}
+aside{border-left:1px solid var(--line);overflow-y:auto;padding:14px 16px 24px}
+h2{font-size:13px;font-weight:800;margin:16px 0 8px;color:var(--ink)}
+h2:first-child{margin-top:0}
+.opt{display:flex;align-items:center;gap:8px;min-height:34px;padding:2px 8px;border-radius:6px;cursor:pointer;font-size:14px}
+.opt:hover{background:light-dark(#f4f6f8,#1a2027)}
+.opt input{width:16px;height:16px;accent-color:#101418;flex:none}
+.opt.on{background:light-dark(#fff6cc,#2d2a14)}
+.leg{display:grid;gap:4px;font-size:13px}
+.leg div{display:flex;gap:8px;align-items:center}
+.sw{width:18px;height:12px;border:1px solid rgba(0,0,0,.25);flex:none;border-radius:2px}
+#info{font-size:13.5px;background:light-dark(#f7f8fa,#161b21);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+#info table{width:100%;border-collapse:collapse}
+#info td{padding:3px 0;vertical-align:top}#info td:last-child{text-align:right;font-weight:600}
+.k{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.note{font-size:12.5px;color:var(--mut)}
+input[type=range]{width:100%;accent-color:#101418}
+label.small{font-size:13px;color:var(--mut)}
+#clr{font:600 13px Manrope,system-ui,sans-serif;min-height:34px;padding:4px 12px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}#clr:hover{background:light-dark(#f4f6f8,#1a2027)}#clr:focus-visible{outline:2px solid #101418;outline-offset:2px}
+select{font:15px Manrope,system-ui,sans-serif;width:100%;min-height:38px;padding:4px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin-bottom:6px}
+.leaflet-container{font:inherit}
+.leaflet-popup-content{font-size:13px;margin:10px 12px}
+@media(max-width:760px){main{grid-template-columns:1fr;grid-template-rows:62vh auto}aside{border-left:0;border-top:1px solid var(--line)}header p{display:none}}
+</style>
+</head>
+<body>
+<header><h1>Kerentanan gerakan tanah Kabupaten Majalengka</h1><p>Purwarupa WebGIS disertasi: skenario A–D, ZKGT PVMBG, litologi, tanah, dan inventori 303 kejadian</p></header>
+<main>
+<div id="map" role="region" aria-label="Peta"></div>
+<aside>
+<h2>Peta dasar</h2>
+<select id="bm" aria-label="Peta dasar"><option value="none">Relief DEMNAS saja</option><option value="osm">OpenStreetMap</option><option value="sat">Citra satelit (Esri)</option></select>
+<h2>Peta utama</h2>
+<div id="base"></div>
+<label class="small" for="op">Transparansi lapisan</label>
+<input id="op" type="range" min="0.2" max="1" step="0.05" value="0.85">
+<h2>Lapisan tambahan</h2>
+<div id="ovl"></div>
+<h2>Legenda</h2>
+<div id="legend" class="leg"></div>
+<h2 style="display:flex;justify-content:space-between;align-items:center">Informasi lokasi <button id="clr" type="button" hidden>Hapus pilihan</button></h2>
+<div id="info"><span class="note">Klik peta untuk melihat kelas kerentanan skenario A–D, zona ZKGT, litologi, dan jenis tanah di lokasi tersebut.</span></div>
+<h2>Catatan</h2>
+<p class="note">Kelas kerentanan adalah peringkat relatif di dalam kabupaten (persentil luas 50/20/15/10/5%), bukan probabilitas keruntuhan absolut. A = titik, 12 faktor; B = titik, 7 faktor; C = poligon, 12 faktor; D = poligon, 7 faktor. ZKGT: Pusat Vulkanologi dan Mitigasi Bencana Geologi (2016). Litologi: Peta Geologi Lembar Arjawinangun dan Tasikmalaya. Jenis tanah: Bappelitbangda Kabupaten Majalengka (2025). Purwarupa ini belum merupakan peta resmi.</p>
+</aside>
+</main>
+<script src="leaflet.js"></script>
+<script>
+{
+const B=[[-7.10,107.90],[-6.50,108.45]];
+const LSM=[['Sangat rendah','#1A9641'],['Rendah','#A6D96A'],['Sedang','#FFFFBF'],['Tinggi','#FDAE61'],['Sangat tinggi','#D7191C']];
+const ZK=[['Sangat rendah','#1A9641'],['Rendah','#A6D96A'],['Menengah','#FDAE61'],['Tinggi','#D7191C']];
+const KON=[['Tinggi/sangat tinggi pada keempat skenario','#B2182B'],['Tinggi/sangat tinggi pada sebagian skenario','#F4A582']];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let META=null,GRID=null;
+const map=L.map('map',{zoomSnap:0.25,attributionControl:true,minZoom:9,maxZoom:16}).fitBounds([[-7.08,107.92],[-6.52,108.43]]);
+map.attributionControl.setPrefix('Leaflet');
+L.control.scale({imperial:false}).addTo(map);
+const BM={osm:L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}),sat:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Citra © Esri'})};let bmCur=null;
+document.getElementById('bm').addEventListener('change',e=>{if(bmCur)map.removeLayer(bmCur);bmCur=BM[e.target.value]||null;if(bmCur){bmCur.addTo(map);bmCur.bringToBack()}hs.setOpacity(bmCur?0.35:0.9)});
+const hs=L.imageOverlay('data/hillshade.png',B,{opacity:0.9}).addTo(map);
+const bases=[
+ {id:'D',name:'Skenario D (poligon, 7 faktor)',img:'lsm_D.png',leg:LSM},
+ {id:'C',name:'Skenario C (poligon, 12 faktor)',img:'lsm_C.png',leg:LSM},
+ {id:'B',name:'Skenario B (titik, 7 faktor)',img:'lsm_B.png',leg:LSM},
+ {id:'A',name:'Skenario A (titik, 12 faktor)',img:'lsm_A.png',leg:LSM},
+ {id:'kon',name:'Konsistensi kelas tinggi A–D',img:'konsistensi.png',leg:KON},
+ {id:'zk',name:'ZKGT PVMBG (2016)',img:'zkgt.png',leg:ZK},
+ {id:'lit',name:'Litologi',img:'litologi.png',leg:'geo'},
+ {id:'soil',name:'Jenis tanah',img:'tanah.png',leg:'soil'},
+ {id:'none',name:'Relief saja',img:null,leg:[]}];
+const ov={};let cur=null;
+bases.forEach(b=>{if(b.img)ov[b.id]=L.imageOverlay('data/'+b.img,B,{opacity:0.85,interactive:false})});
+document.getElementById('base').innerHTML=bases.map((b,i)=>`<label class="opt${i?'':' on'}"><input type="radio" name="base" value="${b.id}"${i?'':' checked'}>${b.name}</label>`).join('');
+function legend(b){
+  let items=b.leg;
+  if(items==='geo')items=META?META.geo:[];if(items==='soil')items=META?META.soil:[];
+  const extra=[];
+  if(layers.inv.on)extra.push(['Poligon gerakan tanah (303)','#5b0000']);
+  if(layers.lap.on)extra.push(['Titik pengamatan lapangan','#2C7BB6']);
+  document.getElementById('legend').innerHTML=items.concat(extra).map(([n,c])=>`<div><span class="sw" style="background:${c}"></span>${esc(n)}</div>`).join('')||'<span class="note">Relief DEMNAS</span>';
+}
+function setBase(id){
+  if(cur&&ov[cur])map.removeLayer(ov[cur]);
+  cur=id;const b=bases.find(x=>x.id===id);
+  if(ov[id]){ov[id].setOpacity(+document.getElementById('op').value).addTo(map);ov[id].bringToBack();hs.bringToBack();}
+  document.querySelectorAll('#base .opt').forEach(l=>l.classList.toggle('on',l.querySelector('input').value===id));
+  legend(b);
+}
+document.getElementById('base').addEventListener('change',e=>setBase(e.target.value));
+document.getElementById('op').addEventListener('input',e=>{if(ov[cur])ov[cur].setOpacity(+e.target.value)});
+// vector layers
+const layers={
+ kec:{name:'Batas kecamatan',on:true,lyr:null},
+ inv:{name:'Inventori gerakan tanah 2013–2023',on:true,lyr:null},
+ ses:{name:'Sesar',on:false,lyr:null},
+ lap:{name:'Titik pengamatan lapangan (Nov 2026)',on:true,lyr:null}};
+document.getElementById('ovl').innerHTML=Object.entries(layers).map(([k,v])=>`<label class="opt${v.on?' on':''}"><input type="checkbox" value="${k}"${v.on?' checked':''}>${v.name}</label>`).join('');
+document.getElementById('ovl').addEventListener('change',e=>{const k=e.target.value,v=layers[k];v.on=e.target.checked;e.target.parentElement.classList.toggle('on',v.on);if(v.lyr){v.on?v.lyr.addTo(map):map.removeLayer(v.lyr)}legend(bases.find(x=>x.id===cur));});
+const get=u=>fetch(u).then(r=>{if(!r.ok)throw new Error(u);return r});
+let KEC=null;
+Promise.all([get('data/meta.json').then(r=>r.json()),get('data/grid.json').then(r=>r.json()).then(j=>{const t=atob(j.b64),u=new Uint8Array(t.length);for(let i=0;i<t.length;i++)u[i]=t.charCodeAt(i);return u.buffer})]).then(([m,g])=>{META=m;GRID=new Uint8Array(g);setBase(cur||'D')}).catch(()=>{});
+get('data/kecamatan.geojson').then(r=>r.json()).then(d=>{KEC=d;layers.kec.lyr=L.geoJSON(d,{style:{color:'#222',weight:0.8,dashArray:'4 3',fill:false},interactive:false});if(layers.kec.on)layers.kec.lyr.addTo(map)}).catch(()=>{});
+get('data/inventori.geojson').then(r=>r.json()).then(d=>{layers.inv.lyr=L.geoJSON(d,{style:{color:'#5b0000',weight:1,fillColor:'#5b0000',fillOpacity:0.7},onEachFeature:(f,l)=>l.bindPopup(`<b>${esc(f.properties.LS_ID)}</b><br>Luas ±${Math.round(f.properties.luas_m2).toLocaleString('id-ID')} m²`)});if(layers.inv.on)layers.inv.lyr.addTo(map)}).catch(()=>{});
+get('data/sesar.geojson').then(r=>r.json()).then(d=>{const nm={PUSGEN:'PuSGeN (2017)',ACTIVE:'Sesar aktif',GEOMAP:'Peta geologi'};layers.ses.lyr=L.geoJSON(d,{style:{color:'#000',weight:1.4},onEachFeature:(f,l)=>l.bindPopup('Sesar: '+esc(nm[f.properties.sumber]||f.properties.sumber))});if(layers.ses.on)layers.ses.lyr.addTo(map)}).catch(()=>{});
+get('data/lapangan.geojson').then(r=>r.json()).then(d=>{const col={'Longsor/kerusakan jalan':'#D7191C','Mata air':'#2C7BB6','Singkapan batuan/profil tanah':'#8C510A','Pengamatan geomorfologi':'#1A9641','Pengamatan (deskripsi menyusul)':'#9e9e9e'};
+ layers.lap.lyr=L.geoJSON(d,{pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:6,color:'#000',weight:1,fillColor:col[f.properties.kategori]||'#fff',fillOpacity:1}),
+ onEachFeature:(f,l)=>{const p=f.properties,k=String(p.kelas||'').split('/');l.bindPopup(`<b>${esc(p.label)}</b> · ${esc(p.kategori)}<br>${esc(p.ket)}<br><span class="note">Kelas A/B/C/D: ${k.map(v=>esc(LSM[+v-1]?.[0]||'–')).join(' / ')}</span>`)}});
+ if(layers.lap.on)layers.lap.lyr.addTo(map)}).catch(()=>{});
+// identify
+function pip(pt,ring){let c=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const[xi,yi]=ring[i],[xj,yj]=ring[j];if(((yi>pt[1])!==(yj>pt[1]))&&(pt[0]<(xj-xi)*(pt[1]-yi)/(yj-yi)+xi))c=!c}return c}
+function inPoly(pt,g){const polys=g.type==='Polygon'?[g.coordinates]:g.coordinates;return polys.some(p=>pip(pt,p[0])&&!p.slice(1).some(h=>pip(pt,h)))}
+const mk=L.circleMarker([0,0],{radius:5,color:'#101418',weight:2,fillColor:'#ffd84a',fillOpacity:1});
+map.on('click',e=>{
+  const {lat,lng}=e.latlng;mk.setLatLng(e.latlng).addTo(map);
+  let rows=`<tr><td>Koordinat</td><td>${lat.toFixed(5)}, ${lng.toFixed(5)}</td></tr>`;
+  if(META&&GRID){const[w,s,ea,n]=META.bounds,c=Math.floor((lng-w)/META.res),r=Math.floor((n-lat)/META.res);
+    if(c>=0&&r>=0&&c<META.nx&&r<META.ny){const o=(r*META.nx+c)*7,v=GRID.subarray(o,o+7);
+      if(v[0]){['A','B','C','D'].forEach((s,i)=>{const L5=LSM[v[i]-1];rows+=`<tr><td>Skenario ${s}</td><td><span class="k" style="background:${L5[1]}"></span>${L5[0]}</td></tr>`});
+        if(v[4])rows+=`<tr><td>ZKGT PVMBG</td><td><span class="k" style="background:${ZK[v[4]-1][1]}"></span>${ZK[v[4]-1][0]}</td></tr>`;
+        if(v[5])rows+=`<tr><td>Litologi</td><td>${esc(META.geo[v[5]-1][0])}</td></tr>`;
+        if(v[6])rows+=`<tr><td>Jenis tanah</td><td>${esc(META.soil[v[6]-1][0])}</td></tr>`;}
+      else rows+='<tr><td colspan="2" class="note">Di luar Kabupaten Majalengka</td></tr>';}}
+  if(KEC){const f=KEC.features.find(f=>inPoly([lng,lat],f.geometry));if(f){const p=f.properties;rows+=`<tr><td colspan="2"><b>Kecamatan ${esc(p.nama)}</b></td></tr><tr><td>Luas</td><td>${p.luas==null?'–':p.luas.toLocaleString('id-ID')+' km²'}</td></tr><tr><td>Kejadian 2013–2023</td><td>${p.kejadian}</td></tr>`+(p.hvA==null?'':`<tr><td>Tinggi + sangat tinggi A/C</td><td>${p.hvA.toLocaleString('id-ID')}/${p.hvC.toLocaleString('id-ID')} km²</td></tr><tr><td>Luas berpindah kelas</td><td>${p.pindah.toLocaleString('id-ID')} km²</td></tr>`)}}
+  document.getElementById('info').innerHTML=`<table>${rows}</table>`;CLR.hidden=false;
+});
+const INFO0=document.getElementById('info').innerHTML,CLR=document.getElementById('clr');
+function clearSel(){map.removeLayer(mk);map.closePopup();document.getElementById('info').innerHTML=INFO0;CLR.hidden=true}
+CLR.addEventListener('click',clearSel);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')clearSel()});
+setBase('D');
+}
+</script>
+</body>
+</html>
