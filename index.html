@@ -43,6 +43,9 @@ label.small{font-size:13px;color:var(--mut)}
 #clr{font:600 13px Manrope,system-ui,sans-serif;min-height:34px;padding:4px 12px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}#clr:hover{background:light-dark(#f4f6f8,#1a2027)}#clr:focus-visible{outline:2px solid #101418;outline-offset:2px}
 select{font:15px Manrope,system-ui,sans-serif;width:100%;min-height:38px;padding:4px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin-bottom:6px}
 .leaflet-container{font:inherit}
+.lbl{background:none;border:0;font:700 12px/1.1 Manrope,system-ui,sans-serif;color:#101418;text-align:center;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff;pointer-events:none}
+.lbl span{display:inline-block;transform:translate(-50%,-50%)}
+.hide-lbl .lbl{display:none}
 .leaflet-popup-content{font-size:13px;margin:10px 12px}
 @media(max-width:760px){main{grid-template-columns:1fr;grid-template-rows:62vh auto}aside{border-left:0;border-top:1px solid var(--line)}header p{display:none}}
 </style>
@@ -116,6 +119,7 @@ document.getElementById('op').addEventListener('input',e=>{if(ov[cur])ov[cur].se
 // vector layers
 const layers={
  kec:{name:'Batas kecamatan',on:true,lyr:null},
+ lbl:{name:'Nama kecamatan',on:true,lyr:null},
  inv:{name:'Inventori gerakan tanah 2013–2023',on:true,lyr:null},
  ses:{name:'Sesar',on:false,lyr:null},
  lap:{name:'Titik pengamatan lapangan (Nov 2026)',on:true,lyr:null}};
@@ -124,7 +128,8 @@ document.getElementById('ovl').addEventListener('change',e=>{const k=e.target.va
 const get=u=>fetch(u).then(r=>{if(!r.ok)throw new Error(u);return r});
 let KEC=null;
 Promise.all([get('data/meta.json').then(r=>r.json()),get('data/grid.json').then(r=>r.json()).then(j=>{const t=atob(j.b64),u=new Uint8Array(t.length);for(let i=0;i<t.length;i++)u[i]=t.charCodeAt(i);return u.buffer})]).then(([m,g])=>{META=m;GRID=new Uint8Array(g);setBase(cur||'D')}).catch(()=>{});
-get('data/kecamatan.geojson').then(r=>r.json()).then(d=>{KEC=d;layers.kec.lyr=L.geoJSON(d,{style:{color:'#222',weight:0.8,dashArray:'4 3',fill:false},interactive:false});if(layers.kec.on)layers.kec.lyr.addTo(map)}).catch(()=>{});
+get('data/kecamatan.geojson').then(r=>r.json()).then(d=>{KEC=d;layers.kec.lyr=L.geoJSON(d,{style:{color:'#222',weight:0.8,dashArray:'4 3',fill:false},interactive:false});if(layers.kec.on)layers.kec.lyr.addTo(map);
+ layers.lbl.lyr=L.layerGroup(d.features.filter(f=>f.properties.lx!=null).map(f=>L.marker([f.properties.ly,f.properties.lx],{icon:L.divIcon({className:'lbl',html:'<span>'+esc(f.properties.nama)+'</span>',iconSize:[0,0]}),interactive:false,keyboard:false})));if(layers.lbl.on)layers.lbl.lyr.addTo(map)}).catch(()=>{});
 get('data/inventori.geojson').then(r=>r.json()).then(d=>{layers.inv.lyr=L.geoJSON(d,{style:{color:'#5b0000',weight:1,fillColor:'#5b0000',fillOpacity:0.7},onEachFeature:(f,l)=>l.bindPopup(`<b>${esc(f.properties.LS_ID)}</b><br>Luas ±${Math.round(f.properties.luas_m2).toLocaleString('id-ID')} m²`)});if(layers.inv.on)layers.inv.lyr.addTo(map)}).catch(()=>{});
 get('data/sesar.geojson').then(r=>r.json()).then(d=>{const nm={PUSGEN:'PuSGeN (2017)',ACTIVE:'Sesar aktif',GEOMAP:'Peta geologi'};layers.ses.lyr=L.geoJSON(d,{style:{color:'#000',weight:1.4},onEachFeature:(f,l)=>l.bindPopup('Sesar: '+esc(nm[f.properties.sumber]||f.properties.sumber))});if(layers.ses.on)layers.ses.lyr.addTo(map)}).catch(()=>{});
 get('data/lapangan.geojson').then(r=>r.json()).then(d=>{const col={'Longsor/kerusakan jalan':'#D7191C','Mata air':'#2C7BB6','Singkapan batuan/profil tanah':'#8C510A','Pengamatan geomorfologi':'#1A9641','Pengamatan (deskripsi menyusul)':'#9e9e9e'};
@@ -153,6 +158,7 @@ function clearSel(){map.removeLayer(mk);map.closePopup();document.getElementById
 CLR.addEventListener('click',clearSel);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')clearSel()});
 setBase('D');
+const zl=()=>document.getElementById('map').classList.toggle('hide-lbl',map.getZoom()<10);map.on('zoomend',zl);zl();
 }
 </script>
 </body>
